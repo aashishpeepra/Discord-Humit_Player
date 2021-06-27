@@ -1,4 +1,5 @@
 const ytdl = require("ytdl-core");
+const getVideoUrl = require("../helper/getVideoUrl");
 
 module.exports = {
   name: "play",
@@ -20,13 +21,14 @@ module.exports = {
           "I need the permissions to join and speak in your voice channel!"
         );
       }
-
-      const songInfo = await ytdl.getInfo(args[1]);
+      message.channel.send("Nice Choice. Let me find it! 🎵")
+      const songInfo = await getVideoUrl(args[1]);
+      
       const song = {
-        title: songInfo.videoDetails.title,
-        url: songInfo.videoDetails.video_url
+        title: songInfo.title,
+        url: songInfo.url,
+        thumbnail:songInfo.bestThumbnail.url
       };
-
       if (!serverQueue) {
         const queueContruct = {
           textChannel: message.channel,
@@ -81,6 +83,7 @@ module.exports = {
       })
       .on("error", error => console.error(error));
     dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
-    serverQueue.textChannel.send(`Start playing: **${song.title}**`);
+    //customize the message sent when the song starts
+    serverQueue.textChannel.send(`Started playing: **${song.title}**`,{files:[song.thumbnail]});
   }
 };

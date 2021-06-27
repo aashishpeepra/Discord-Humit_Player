@@ -7,5 +7,6 @@ module.exports = {
 		if (!serverQueue) return message.channel.send('There is no song that I could pause!');
 		if (serverQueue.connection.dispatcher.paused) return message.channel.send('Song already paused!');
 		serverQueue.connection.dispatcher.pause();
+		serverQueue.textChannel.send("Pause-d the song! 👋")
 	},
 };
