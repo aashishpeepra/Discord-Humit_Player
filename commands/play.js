@@ -1,9 +1,10 @@
 const ytdl = require("ytdl-core");
 const getVideoUrl = require("../helper/getVideoUrl");
+const buildSongQueue = require("../helper/buildSongQueue");
 
 module.exports = {
   name: "play",
-  description: "Play a song in your channel!",
+  description: "Play all hums in a Station",
   async execute(message) {
     try {
       const args = message.content.split(" ");
@@ -21,20 +22,18 @@ module.exports = {
           "I need the permissions to join and speak in your voice channel!"
         );
       }
-      message.channel.send("Nice Choice. Let me find it! 🎵")
-      const songInfo = await getVideoUrl(args[1]);
+      message.channel.send(`${args[1]} is a nice station. Let me load a few hums first 🎵`)
+      const songInfo = await buildSongQueue(args[1]);
       
-      const song = {
-        title: songInfo.title,
-        url: songInfo.url,
-        thumbnail:songInfo.bestThumbnail.url
-      };
+      const song = songInfo[0];
+      console.log(songInfo)
+      songInfo.shift();
       if (!serverQueue) {
         const queueContruct = {
           textChannel: message.channel,
           voiceChannel: voiceChannel,
           connection: null,
-          songs: [],
+          songs: songInfo,
           volume: 5,
           playing: true
         };
@@ -74,14 +73,34 @@ module.exports = {
       queue.delete(guild.id);
       return;
     }
-
+    
+    const playNextSong = ()=>{
+      serverQueue.songs.shift();
+      this.play(message, serverQueue.songs[0]);
+      clearInterval(interval);
+    }
+    let interval;
+    
     const dispatcher = serverQueue.connection
-      .play(ytdl(song.url))
+      .play(ytdl(song.url),{seek:song.start/1000})
       .on("finish", () => {
-        serverQueue.songs.shift();
-        this.play(message, serverQueue.songs[0]);
+        // serverQueue.songs.shift();
+        // this.play(message, serverQueue.songs[0]);
+        // playNextSong()
+      })
+      .on("start",temp=>{
+        if(interval)
+          clearInterval(interval);
+        console.log("started");
+        interval = setInterval(()=>{
+          dispatcher.pause();
+          playNextSong();
+        },30000);
+
       })
       .on("error", error => console.error(error));
+
+
     dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
     //customize the message sent when the song starts
     serverQueue.textChannel.send(`Started playing: **${song.title}**`,{files:[song.thumbnail]});
