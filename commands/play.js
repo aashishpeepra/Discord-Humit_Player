@@ -23,25 +23,38 @@ module.exports = {
         );
       }
       message.channel.send(`${args[1]} is a nice station. Let me load a few hums first 🎵`)
-      const songInfo = await buildSongQueue(args[1]);
+      const {firstHumData:songInfo,nextHums} = await buildSongQueue(args[1]);
+      console.log(songInfo)
+      if(songInfo.length==0)
+      {
+        message.channel.send(`Looks like I can't find ${args[1]} 🎵`);
+        return;
+      }
       
       const song = songInfo[0];
-      console.log(songInfo)
-      songInfo.shift();
+      console.log(songInfo);
       if (!serverQueue) {
         const queueContruct = {
           textChannel: message.channel,
           voiceChannel: voiceChannel,
           connection: null,
-          songs: songInfo,
+          songs: [],
           volume: 5,
           playing: true
         };
+        
 
         queue.set(message.guild.id, queueContruct);
 
         queueContruct.songs.push(song);
-
+        nextHums.then(songsFromHum=>{
+          try{
+            // console.log(songsFromHum,serverQueue)
+            songsFromHum.forEach(song=>queueContruct.songs.push(song));
+          }  catch(err){
+            console.log(err,"WHILE ADDING NEXT HUMS INTO SONGQUEUE")
+          }
+        })
         try {
           var connection = await voiceChannel.join();
           queueContruct.connection = connection;
@@ -57,10 +70,12 @@ module.exports = {
           `${song.title} has been added to the queue!`
         );
       }
+      
     } catch (error) {
       console.log(error);
       message.channel.send(error.message);
     }
+    
   },
 
   play(message, song) {
@@ -82,7 +97,7 @@ module.exports = {
     let interval;
     
     const dispatcher = serverQueue.connection
-      .play(ytdl(song.url),{seek:song.start/1000})
+      .play(ytdl(song.url))
       .on("finish", () => {
         // serverQueue.songs.shift();
         // this.play(message, serverQueue.songs[0]);
